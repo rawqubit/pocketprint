@@ -189,13 +189,15 @@
     span.style.cssText = 'position:absolute;left:-9999px;font-size:72px;white-space:nowrap;';
     span.textContent = 'mmmmmmmmmmlli';
     document.body.appendChild(span);
-    function width(font) {
-      span.style.fontFamily = font;
+    function width(family) {
+      span.style.fontFamily = family;
       return span.getBoundingClientRect().width;
     }
-    var defaults = base.map(width);
+    var defaults = base.map(function (b) { return width(b); });
     var found = candidates.filter(function (font) {
-      return base.some(function (b, i) { span.style.fontFamily = '"' + font + '",' + b; return width() !== defaults[i]; });
+      return base.some(function (b, i) {
+        return width('"' + font + '",' + b) !== defaults[i];
+      });
     });
     document.body.removeChild(span);
     return found;
