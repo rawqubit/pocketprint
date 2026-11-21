@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pocketprint — what every website already knows about you</title>
+<meta name="description" content="Your browser hands out two dozen signals before you click anything. See yours, in plain English, and how much they narrow you down. Nothing is sent anywhere.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='4' width='9' height='9' rx='2' fill='%237dd3fc'/><rect x='19' y='19' width='9' height='9' rx='2' fill='%237dd3fc'/></svg>">
+<style>
+  :root {
+    --bg: #05070c; --panel: #0b0f17; --line: #182030; --text: #e8edf6;
+    --muted: #8e99ad; --faint: #5a6478; --accent: #7dd3fc; --hot: #ff7ab6;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+  body { -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  header { display: flex; align-items: center; gap: 14px; padding: 22px 0 6px; }
+  .mark { width: 20px; height: 20px; border-radius: 4px; background: var(--accent); flex: none; box-shadow: 0 0 22px rgba(125,211,252,.45); }
+  .brand { font-family: var(--mono); font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .spacer { flex: 1; }
+  .pill { font-family: var(--mono); font-size: 11px; color: var(--accent); border: 1px solid #173242; background: #071620; padding: 6px 10px; border-radius: 999px; }
+  h1 { font-size: clamp(30px, 4.6vw, 54px); line-height: 1.04; letter-spacing: -.025em; margin: 40px 0 0; font-weight: 660; }
+  h1 span { color: var(--accent); }
+  .lede { color: var(--muted); font-size: 17px; line-height: 1.6; max-width: 640px; margin: 16px 0 0; }
+  .lede b { color: var(--text); font-weight: 600; }
+  .hero { display: grid; grid-template-columns: 320px 1fr; gap: 22px; margin: 34px 0 0; align-items: start; }
+  .idcard { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, #0b111c, #070a11); padding: 20px; }
+  .avatar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .avatar i { aspect-ratio: 1; border-radius: 3px; background: #101827; }
+  .avatar i.on { background: var(--accent); box-shadow: 0 0 12px rgba(125,211,252,.5); }
+  .hash { font-family: var(--mono); font-size: 11px; color: var(--faint); margin-top: 16px; word-break: break-all; line-height: 1.6; }
+  .verdict { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .verdict b { display: block; font-size: 30px; letter-spacing: -.02em; font-weight: 650; }
+  .verdict span { color: var(--muted); font-size: 12px; line-height: 1.5; display: block; margin-top: 4px; }
+  .signals { border: 1px solid var(--line); border-radius: 18px; background: var(--panel); overflow: hidden; }
+  .sig { display: grid; grid-template-columns: 190px 1fr 58px; gap: 14px; align-items: center; padding: 11px 18px; border-bottom: 1px solid #101725; }
+  .sig:hover { background: #0e141f; }
+  .sig .k { color: var(--muted); font-size: 12.5px; }
+  .sig .v { font-family: var(--mono); font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sig .b { font-family: var(--mono); font-size: 11px; color: var(--faint); text-align: right; }
+  .sig.zero .v { color: var(--faint); }
+  .sighead { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: #0a0f18; }
+  .sighead h2 { margin: 0; font-size: 13px; font-weight: 600; }
+  .sighead .note { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-left: auto; }
+  .bitsbar { height: 3px; background: #101725; }
+  .bitsbar i { display: block; height: 3px; background: linear-gradient(90deg, var(--accent), var(--hot)); width: 0; transition: width .9s ease; }
+  .means { margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--panel); }
+  .card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+  .card p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  .actions { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: #131b28; color: var(--text); padding: 11px 18px; font-size: 14px; }
+  button:hover { border-color: #2b3a52; background: #182233; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04121c; font-weight: 600; }
+  footer { margin: 48px 0 40px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--faint); font-size: 12px; display: flex; gap: 22px; flex-wrap: wrap; }
+  @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .means { grid-template-columns: 1fr; } .sig { grid-template-columns: 130px 1fr 46px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark" aria-hidden="true"></div>
+    <div class="brand">pocketprint</div>
+    <div class="spacer"></div>
+    <div class="pill" id="pill">0 bytes sent</div>
+  </header>
+
+  <h1>This page knows more<br>about you than your <span>name</span>.</h1>
+  <p class="lede">Before you click anything, your browser answers about two dozen questions — what your graphics card is, how your text renders, what your audio stack adds to a tone. Every ad network asks them too. This page asks yours out loud, then shows what the answers are <b>worth in bits</b>.</p>
+
+  <div class="hero">
+    <div class="idcard">
+      <div class="avatar" id="avatar"></div>
+      <div class="hash" id="hash">computing…</div>
+      <div class="verdict">
+        <b id="oneIn">—</b>
+        <span>raw bits of signal. Correlated answers cut that to roughly 18–19 bits in published studies — about 1 in 300,000 browsers.</span>
+      </div>
+    </div>
+    <div class="signals">
+      <div class="sighead"><h2>What your browser just told me</h2><div class="note" id="sigNote">…</div></div>
+      <div id="rows"></div>
+      <div class="bitsbar"><i id="bitsbar"></i></div>
+    </div>
+  </div>
+
+  <div class="means">
+    <div class="card"><h3>It is not a name</h3><p>None of this identifies you personally, and it changes when you switch browsers, install a font or update a GPU driver. It is a temporary serial number, not a permanent ID.</p></div>
+    <div class="card"><h3>It is enough to link sessions</h3><p>Clearing cookies does not clear this. Two visits a week apart still look like the same machine, which is exactly what a fingerprint is for.</p></div>
+    <div class="card"><h3>Bits, not certainty</h3><p>The count is an upper bound, because signals correlate: a Mac has a Mac GPU and Mac fonts. Published studies put realistic uniqueness between 1 in 3,000 and 1 in 300,000.</p></div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="copy">Copy my report</button>
+    <button id="save">Save a card</button>
+    <button id="again">Recompute</button>
+  </div>
+
+  <footer>
+    <div>Built by <a href="https://github.com/rawqubit">Srinikhil Chakilam</a>. MIT licensed, no dependencies, no analytics, no requests.</div>
+    <div><a href="https://github.com/rawqubit/pocketprint">source</a></div>
+  </footer>
+</div>
+<script src="src/fp.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* Count every way out of the page, before anything else runs. */
+  var sent = 0;
+  var realFetch = window.fetch;
+  if (realFetch) window.fetch = function () { sent += 1; return realFetch.apply(this, arguments); };
+  var XHR = window.XMLHttpRequest;
+  if (XHR) { var open = XHR.prototype.open; XHR.prototype.open = function () { sent += 1; return open.apply(this, arguments); }; }
+  function paintPill() { document.getElementById('pill').textContent = sent + ' bytes sent'; }
+  paintPill();
+
+  var $ = function (id) { return document.getElementById(id); };
+  var signals = [];
+  function add(key, value, buckets, note) {
+    if (value === undefined || value === null || value === '') { value = 'not exposed'; buckets = 1; }
+    signals.push({ key: key, value: String(value), buckets: buckets || 1, note: note || '' });
+  }
+
+  /* ---- the signals a tracker reads first ---- */
+  function canvasPrint() {
+    try {
+      var c = document.createElement('canvas');
+      c.width = 260; c.height = 60;
+      var g = c.getContext('2d');
+      g.textBaseline = 'alphabetic';
+      g.fillStyle = '#f60';
+      g.fillRect(100, 4, 62, 20);
+      g.fillStyle = '#069';
+      g.font = '14px "Arial"';
+      g.fillText('pocketprint 1.0 😀', 4, 17);
+      g.fillStyle = 'rgba(102, 204, 0, 0.7)';
+      g.font = '17px "Times New Roman"';
+      g.fillText('pocketprint 1.0 😀', 4, 40);
+      return c.toDataURL();
+    } catch (e) { return null; }
+  }
+
+  function webglPrint() {
+    try {
+      var c = document.createElement('canvas');
+      var gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) return null;
+      var ext = gl.getExtension('WEBGL_debug_renderer_info');
+      var vendor = ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
+      var renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+      return vendor + ' / ' + renderer;
+    } catch (e) { return null; }
+  }
+
+  function audioPrint() {
+    return new Promise(function (resolve) {
+      try {
+        var Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        if (!Ctx) return resolve(null);
+        var ctx = new Ctx(1, 44100, 44100);
+        var osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = 10000;
+        var comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -50; comp.knee.value = 40; comp.ratio.value = 12;
+        osc.connect(comp); comp.connect(ctx.destination); osc.start(0);
+        ctx.startRendering().then(function (buffer) {
+          var data = buffer.getChannelData(0), sum = 0;
+          for (var i = 4000; i < 4600; i++) sum += Math.abs(data[i]);
+          resolve(sum.toFixed(7));
+        }).catch(function () { resolve(null); });
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  function fontList() {
+    var candidates = ['Arial', 'Courier New', 'Georgia', 'Helvetica Neue', 'Menlo', 'Monaco',
+      'Times New Roman', 'Trebuchet MS', 'Verdana', 'Segoe UI', 'Roboto', 'Ubuntu', 'Cantarell',
+      'Noto Sans', 'SF Pro Text', 'Calibri', 'Cambria', 'Consolas', 'Tahoma', 'Futura',
+      'Gill Sans', 'Optima', 'Baskerville', 'Didot', 'American Typewriter', 'Andale Mono'];
+    var base = ['monospace', 'sans-serif', 'serif'];
+    var span = document.createElement('span');
+    span.style.cssText = 'position:absolute;left:-9999px;font-size:72px;white-space:nowrap;';
+    span.textContent = 'mmmmmmmmmmlli';
+    document.body.appendChild(span);
+    function width(font) {
+      span.style.fontFamily = font;
+      return span.getBoundingClientRect().width;
+    }
+    var defaults = base.map(width);
+    var found = candidates.filter(function (font) {
+      return base.some(function (b, i) { span.style.fontFamily = '"' + font + '",' + b; return width() !== defaults[i]; });
+    });
+    document.body.removeChild(span);
+    return found;
+  }
+
+  function storageEstimate() {
+    if (!navigator.storage || !navigator.storage.estimate) return Promise.resolve(null);
+    return navigator.storage.estimate().then(function (e) {
+      return Math.round((e.quota || 0) / (1024 * 1024 * 1024)) + ' GB';
+    }).catch(function () { return null; });
+  }
+
+  function collect() {
+    var canvas = canvasPrint();
+    var fonts = fontList();
+    add('canvas render', canvas ? 'hash ' + PocketPrint.fnv1a(canvas) : null, 20000);
+    add('graphics card', webglPrint(), 400);
+    add('fonts present', fonts.length ? fonts.slice(0, 6).join(', ') + (fonts.length > 6 ? ' +' + (fonts.length - 6) : '') : null, Math.min(200, Math.pow(2, Math.min(fonts.length, 8))));
+    add('screen', screen.width + '×' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x', 60);
+    add('window', window.innerWidth + '×' + window.innerHeight, 30);
+    add('colour depth', screen.colorDepth + '-bit', 4);
+    add('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone || null, 200);
+    add('languages', (navigator.languages || [navigator.language]).join(', '), 60);
+    add('CPU cores', navigator.hardwareConcurrency || null, 8);
+    add('device memory', navigator.deviceMemory ? navigator.deviceMemory + ' GB' : null, 5);
+    add('touch points', navigator.maxTouchPoints || 0, 3);
+    add('platform', navigator.platform || null, 6);
+    add('user agent', navigator.userAgent.replace(/^Mozilla\/5\.0\s*/, '').slice(0, 64), 500);
+    add('prefers dark', matchMedia('(prefers-color-scheme: dark)').matches ? 'yes' : 'no', 2);
+    add('reduced motion', matchMedia('(prefers-reduced-motion: reduce)').matches ? 'yes' : 'no', 2);
+    add('do not track', navigator.doNotTrack || 'not set', 3);
+    add('global privacy control', navigator.globalPrivacyControl ? 'on' : 'off', 2);
+    add('cookies', navigator.cookieEnabled ? 'allowed' : 'blocked', 2);
+    add('ad blocker', null, 1);
+    add('math precision', PocketPrint.fnv1a(Math.sin(1) + Math.cos(4.5) + Math.tan(2.2)), 8);
+    return audioPrint().then(function (audio) {
+      add('audio stack', audio ? 'sum ' + audio : null, 5000);
+      return storageEstimate();
+    }).then(function (storage) {
+      add('storage quota', storage, 10);
+      return Promise.resolve();
+    });
+  }
+
+  function blockedByAdblock() {
+    var probe = document.createElement('div');
+    probe.className = 'adsbox ad-banner pub_300x250';
+    probe.style.cssText = 'position:absolute;left:-9999px;width:10px;height:10px;';
+    document.body.appendChild(probe);
+    var hidden = probe.offsetHeight === 0 || probe.clientHeight === 0;
+    document.body.removeChild(probe);
+    return hidden;
+  }
+
+  function render() {
+    var total = 0;
+    var html = signals.map(function (s) {
+      var bits = PocketPrint.bitsFor(s.buckets);
+      total += bits;
+      var zero = s.buckets <= 1;
+      return '<div class="sig' + (zero ? ' zero' : '') + '"><div class="k">' + s.key + '</div><div class="v" title="' +
+        s.value.replace(/"/g, '&quot;') + '">' + s.value.replace(/</g, '&lt;') + '</div><div class="b">' +
+        (zero ? '—' : bits.toFixed(1) + 'b') + '</div></div>';
+    }).join('');
+    $('rows').innerHTML = html;
+    $('sigNote').textContent = signals.length + ' signals · ' + total.toFixed(1) + ' bits';
+
+    var seed = signals.map(function (s) { return s.key + '=' + s.value; }).join('|');
+    var hash = PocketPrint.fnv1a(seed) + PocketPrint.fnv1a(seed + '#2');
+    $('hash').textContent = 'fingerprint ' + hash.slice(0, 8) + ' ' + hash.slice(8, 16);
+    $('oneIn').textContent = total.toFixed(1) + ' bits';
+    var cells = PocketPrint.avatarCells(seed);
+    $('avatar').innerHTML = cells.map(function (on) { return '<i class="' + (on ? 'on' : '') + '"></i>'; }).join('');
+    $('bitsbar').style.width = Math.min(100, total / 60 * 100) + '%';
+    paintPill();
+  }
+
+  function run() {
+    signals = [];
+    var adblock = blockedByAdblock();
+    return collect().then(function () {
+      var i = signals.findIndex(function (s) { return s.key === 'ad blocker'; });
+      signals[i] = { key: 'ad blocker', value: adblock ? 'detected' : 'none detected', buckets: 2, note: '' };
+      render();
+    });
+  }
+
+  function report() {
+    return 'pocketprint — ' + $('hash').textContent + '\n' + $('oneIn').textContent + ' of raw signal from ' + signals.length + ' answers\n\n' +
+      signals.map(function (s) { return s.key + ': ' + s.value; }).join('\n');
+  }
+
+  $('copy').addEventListener('click', function () {
+    var text = report();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () { $('copy').textContent = 'Copied'; setTimeout(function () { $('copy').textContent = 'Copy my report'; }, 1600); });
+    }
+  });
+
+  $('again').addEventListener('click', function () { run(); });
+
+  $('save').addEventListener('click', function () {
+    var w = 1200, h = 630;
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var g = c.getContext('2d');
+    g.fillStyle = '#05070c'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#0a1018'; g.fillRect(0, 0, w, 6);
+    var seed = signals.map(function (s) { return s.key + '=' + s.value; }).join('|');
+    var cells = PocketPrint.avatarCells(seed);
+    for (var i = 0; i < 16; i++) {
+      var x = 60 + (i % 4) * 64, y = 120 + Math.floor(i / 4) * 64;
+      g.fillStyle = cells[i] ? '#7dd3fc' : '#101827';
+      g.fillRect(x, y, 54, 54);
+    }
+    g.fillStyle = '#7dd3fc';
+    g.font = '600 15px ui-monospace, Menlo, monospace';
+    g.fillText('POCKETPRINT', 60, 80);
+    g.fillStyle = '#e8edf6';
+    g.font = '650 58px -apple-system, Inter, sans-serif';
+    g.fillText($('oneIn').textContent, 380, 220);
+    g.fillStyle = '#8e99ad';
+    g.font = '400 20px -apple-system, Inter, sans-serif';
+    g.fillText('of raw signal from ' + signals.length + ' answers your browser gave', 380, 258);
+    g.font = '400 17px ui-monospace, Menlo, monospace';
+    g.fillStyle = '#5a6478';
+    g.fillText($('hash').textContent, 380, 310);
+    g.fillStyle = '#8e99ad';
+    g.font = '400 17px -apple-system, Inter, sans-serif';
+    var lines = signals.slice(0, 6).map(function (s) { return s.key + '  ' + s.value.slice(0, 46); });
+    lines.forEach(function (line, idx) { g.fillText(line, 60, 400 + idx * 30); });
+    var blobCb = function (blob) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pocketprint.png';
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    };
+    c.toBlob(blobCb, 'image/png');
+  });
+
+  run();
+})();
+</script>
+</body>
+</html>

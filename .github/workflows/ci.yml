@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit tests
+        run: node --test test/fp.test.mjs
+      - name: Page has no remote dependencies
+        run: |
+          python3 - <<'PY'
+          import re, sys, pathlib
+          html = pathlib.Path('index.html').read_text()
+          for src in re.findall(r'<script src="([^"]+)"', html):
+              if src.startswith('http'):
+                  sys.exit('remote script: ' + src)
+              if not pathlib.Path(src).exists():
+                  sys.exit('missing script: ' + src)
+          for url in re.findall(r'https?://[^"\s)]+', html):
+              if not any(host in url for host in ('github.com', 'rawqubit', 'w3.org')):
+                  sys.exit('unexpected remote reference: ' + url)
+          print('ok')
+          PY
