@@ -9,7 +9,7 @@ graphics card you have, how your text antialiases, what your audio stack adds to
 a tone, which fonts you installed. Ad networks hash those answers into a number
 that survives clearing your cookies. This page asks yours out loud.
 
-**[rawqubit.github.io/pocketprint](https://rawqubit.github.io/pocketprint/)** — nothing to install, nothing to sign up for, nothing to upload.
+**[srinikhilchakilam.com/pocketprint](https://srinikhilchakilam.com/pocketprint/)** — nothing to install, nothing to sign up for, nothing to upload. A mirror also runs at [rawqubit.github.io/pocketprint](https://rawqubit.github.io/pocketprint/).
 
 ![pocketprint](docs/screenshot.png)
 
