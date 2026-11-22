@@ -49,6 +49,28 @@
   .sighead .note { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-left: auto; }
   .bitsbar { height: 3px; background: #101725; }
   .bitsbar i { display: block; height: 3px; background: linear-gradient(90deg, var(--accent), var(--hot)); width: 0; transition: width .9s ease; }
+  .evidence { margin-top: 22px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .ev { border:1px solid var(--line); border-radius:14px; background:var(--panel); padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .ev h3 { margin:0; font-size:12.5px; font-weight:600; letter-spacing:.01em; }
+  .ev p { margin:0; color:var(--muted); font-size:11.5px; line-height:1.55; }
+  .ev canvas { width:100%; height:auto; border-radius:8px; border:1px solid #141b26; background:#080c12; display:block; }
+  .ev code { font-family: var(--mono); font-size:10.5px; color:var(--faint); word-break:break-all; }
+  .bits { margin-top: 22px; border:1px solid var(--line); border-radius:14px; background:var(--panel); padding:18px; }
+  .bits__head { display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:6px; }
+  .bits__head h3 { margin:0; font-size:13px; }
+  .bits__head span { font-family:var(--mono); font-size:10.5px; color:var(--faint); }
+  .brow { display:grid; grid-template-columns: 150px 1fr 54px; gap:10px; align-items:center; margin:7px 0; font-size:12px; }
+  .brow .name { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .brow .track { height:8px; background:#101725; border-radius:4px; overflow:hidden; }
+  .brow .track i { display:block; height:8px; background:linear-gradient(90deg, var(--accent), var(--hot)); border-radius:4px; }
+  .brow .num { font-family:var(--mono); font-size:10.5px; color:var(--faint); text-align:right; }
+  .brow.real .track i { background: linear-gradient(90deg, #56d3a6, #2f9e78); }
+  .brow.real .name { color: var(--text); }
+  .payload { margin-top: 22px; border:1px solid var(--line); border-radius:14px; background:#080b11; padding:16px 18px; }
+  .payload h3 { margin:0 0 10px; font-size:13px; }
+  .payload pre { margin:0; overflow:auto; max-height:220px; font-family:var(--mono); font-size:11px; line-height:1.6; color:#9fb0c7; }
+  .drift { margin-top: 12px; font-size:12px; color: var(--muted); }
+  .drift b { color: var(--text); }
   .means { margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--panel); }
   .card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
@@ -58,7 +80,7 @@
   button:hover { border-color: #2b3a52; background: #182233; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #04121c; font-weight: 600; }
   footer { margin: 48px 0 40px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--faint); font-size: 12px; display: flex; gap: 22px; flex-wrap: wrap; }
-  @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .means { grid-template-columns: 1fr; } .sig { grid-template-columns: 130px 1fr 46px; } }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } .means { grid-template-columns: 1fr; } .evidence { grid-template-columns: 1fr; } .sig { grid-template-columns: 130px 1fr 46px; } .brow { grid-template-columns: 110px 1fr 44px; } }
 </style>
 </head>
 <body>
@@ -87,6 +109,38 @@
       <div id="rows"></div>
       <div class="bitsbar"><i id="bitsbar"></i></div>
     </div>
+  </div>
+
+  <div class="evidence">
+    <div class="ev">
+      <h3>The pixels your GPU drew</h3>
+      <canvas id="cvsPreview" width="260" height="60" aria-label="The canvas used for the fingerprint"></canvas>
+      <p>This is the exact drawing that got hashed. Same Chrome, different graphics card: different bytes.</p>
+      <code id="cvsHash">—</code>
+    </div>
+    <div class="ev">
+      <h3>The tone your audio stack produced</h3>
+      <canvas id="wavePreview" width="260" height="60" aria-label="Waveform of the fingerprinted audio buffer"></canvas>
+      <p>A compressor and an oscillator, rendered offline. The floating-point sum is the signature.</p>
+      <code id="audioSum">—</code>
+    </div>
+    <div class="ev">
+      <h3>What a tracker would keep</h3>
+      <p>The values below are what a script would POST to a server and hash there. Nothing was sent from this page.</p>
+      <code id="payloadHash">—</code>
+      <p style="margin-top:auto">22 rows of small facts, one short serial number.</p>
+    </div>
+  </div>
+
+  <div class="bits">
+    <div class="bits__head"><h3>Where the bits come from</h3><span>raw signal vs. what survives correlation</span></div>
+    <div id="bitRows"></div>
+    <div class="drift" id="drift"></div>
+  </div>
+
+  <div class="payload">
+    <h3>The record, verbatim</h3>
+    <pre id="payload">—</pre>
   </div>
 
   <div class="means">
@@ -122,6 +176,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var signals = [];
+  var art = { canvas: null, audio: null };
   function add(key, value, buckets, note) {
     if (value === undefined || value === null || value === '') { value = 'not exposed'; buckets = 1; }
     signals.push({ key: key, value: String(value), buckets: buckets || 1, note: note || '' });
@@ -142,6 +197,7 @@
       g.fillStyle = 'rgba(102, 204, 0, 0.7)';
       g.font = '17px "Times New Roman"';
       g.fillText('pocketprint 1.0 😀', 4, 40);
+      art.canvas = c;
       return c.toDataURL();
     } catch (e) { return null; }
   }
@@ -173,6 +229,7 @@
         ctx.startRendering().then(function (buffer) {
           var data = buffer.getChannelData(0), sum = 0;
           for (var i = 4000; i < 4600; i++) sum += Math.abs(data[i]);
+          art.audio = Array.prototype.slice.call(data, 4000, 4600);
           resolve(sum.toFixed(7));
         }).catch(function () { resolve(null); });
       } catch (e) { resolve(null); }
@@ -215,17 +272,17 @@
     var fonts = fontList();
     add('canvas render', canvas ? 'hash ' + PocketPrint.fnv1a(canvas) : null, 20000);
     add('graphics card', webglPrint(), 400);
-    add('fonts present', fonts.length ? fonts.slice(0, 6).join(', ') + (fonts.length > 6 ? ' +' + (fonts.length - 6) : '') : null, Math.min(200, Math.pow(2, Math.min(fonts.length, 8))));
+    add('fonts visible', fonts.length ? fonts.slice(0, 6).join(', ') + (fonts.length > 6 ? ' +' + (fonts.length - 6) : '') : null, Math.min(200, Math.pow(2, Math.min(fonts.length, 8))));
     add('screen', screen.width + '×' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x', 60);
     add('window', window.innerWidth + '×' + window.innerHeight, 30);
     add('colour depth', screen.colorDepth + '-bit', 4);
     add('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone || null, 200);
     add('languages', (navigator.languages || [navigator.language]).join(', '), 60);
     add('CPU cores', navigator.hardwareConcurrency || null, 8);
-    add('device memory', navigator.deviceMemory ? navigator.deviceMemory + ' GB' : null, 5);
+    add('device memory', navigator.deviceMemory ? navigator.deviceMemory + ' GB' : null, 5, 'Chrome buckets and caps this number; it is a class of machine, not a measurement.');
     add('touch points', navigator.maxTouchPoints || 0, 3);
     add('platform', navigator.platform || null, 6);
-    add('user agent', navigator.userAgent.replace(/^Mozilla\/5\.0\s*/, '').slice(0, 64), 500);
+    add('user agent', navigator.userAgent.replace(/^Mozilla\/5\.0\s*/, ''), 500);
     add('prefers dark', matchMedia('(prefers-color-scheme: dark)').matches ? 'yes' : 'no', 2);
     add('reduced motion', matchMedia('(prefers-reduced-motion: reduce)').matches ? 'yes' : 'no', 2);
     add('do not track', navigator.doNotTrack || 'not set', 3);
@@ -258,8 +315,11 @@
       var bits = PocketPrint.bitsFor(s.buckets);
       total += bits;
       var zero = s.buckets <= 1;
-      return '<div class="sig' + (zero ? ' zero' : '') + '"><div class="k">' + s.key + '</div><div class="v" title="' +
-        s.value.replace(/"/g, '&quot;') + '">' + s.value.replace(/</g, '&lt;') + '</div><div class="b">' +
+      var shown = s.value.length > 58 ? s.value.slice(0, 58) + '…' : s.value;
+      var tip = (s.value + (s.note ? ' — ' + s.note : '')).replace(/"/g, '&quot;');
+      return '<div class="sig' + (zero ? ' zero' : '') + '"><div class="k" title="' +
+        (s.note || '').replace(/"/g, '&quot;') + '">' + s.key + '</div><div class="v" title="' + tip + '">' +
+        shown.replace(/</g, '&lt;') + '</div><div class="b">' +
         (zero ? '—' : bits.toFixed(1) + 'b') + '</div></div>';
     }).join('');
     $('rows').innerHTML = html;
@@ -268,11 +328,89 @@
     var seed = signals.map(function (s) { return s.key + '=' + s.value; }).join('|');
     var hash = PocketPrint.fnv1a(seed) + PocketPrint.fnv1a(seed + '#2');
     $('hash').textContent = 'fingerprint ' + hash.slice(0, 8) + ' ' + hash.slice(8, 16);
-    $('oneIn').textContent = total.toFixed(1) + ' bits';
+    $('oneIn').textContent = total.toFixed(1) + ' raw bits';
     var cells = PocketPrint.avatarCells(seed);
     $('avatar').innerHTML = cells.map(function (on) { return '<i class="' + (on ? 'on' : '') + '"></i>'; }).join('');
     $('bitsbar').style.width = Math.min(100, total / 60 * 100) + '%';
+    drawExtras(total, hash);
     paintPill();
+  }
+
+  /* The three proofs: the pixels, the waveform, the record a tracker keeps. */
+  function drawExtras(total, hash) {
+    var pc = $('cvsPreview');
+    var pg = pc.getContext('2d');
+    if (art.canvas) {
+      pg.drawImage(art.canvas, 0, 0, pc.width, pc.height);
+      $('cvsHash').textContent = 'hash ' + PocketPrint.fnv1a(art.canvas.toDataURL()) + ' · ' + pc.width + '×' + pc.height + ' px';
+    }
+
+    var wc = $('wavePreview');
+    var wg = wc.getContext('2d');
+    wg.fillStyle = '#080c12';
+    wg.fillRect(0, 0, wc.width, wc.height);
+    if (art.audio && art.audio.length) {
+      var min = Math.min.apply(null, art.audio), max = Math.max.apply(null, art.audio);
+      var span = (max - min) || 1;
+      wg.strokeStyle = '#7dd3fc';
+      wg.lineWidth = 1;
+      wg.beginPath();
+      art.audio.forEach(function (v, i) {
+        var x = i / (art.audio.length - 1) * (wc.width - 2) + 1;
+        var y = wc.height - 4 - ((v - min) / span) * (wc.height - 8);
+        if (i === 0) wg.moveTo(x, y); else wg.lineTo(x, y);
+      });
+      wg.stroke();
+    }
+    var audioRow = null;
+    signals.forEach(function (s) { if (s.key === 'audio stack') audioRow = s; });
+    $('audioSum').textContent = audioRow ? audioRow.value : 'not exposed';
+
+    var record = { fingerprint: hash.slice(0, 8) + ' ' + hash.slice(8, 16), raw_bits: Number(total.toFixed(1)), signals: {} };
+    signals.forEach(function (s) { record.signals[s.key] = s.value; });
+    $('payloadHash').textContent = record.fingerprint;
+    $('payload').textContent = JSON.stringify(record, null, 2);
+
+    var ranked = signals.map(function (s) {
+      return { key: s.key, bits: PocketPrint.bitsFor(s.buckets) };
+    }).filter(function (s) { return s.bits > 0; }).sort(function (a, b) { return b.bits - a.bits; }).slice(0, 8);
+
+    var peak = ranked.length ? ranked[0].bits : 1;
+    var rows = ranked.map(function (r) {
+      return '<div class="brow"><div class="name">' + r.key + '</div>' +
+        '<div class="track"><i style="width:' + (r.bits / peak * 100).toFixed(1) + '%"></i></div>' +
+        '<div class="num">' + r.bits.toFixed(1) + 'b</div></div>';
+    }).join('');
+    var correlated = 18.1;
+    rows += '<div class="brow real" style="margin-top:14px"><div class="name">raw total, 22 signals</div>' +
+      '<div class="track"><i style="width:100%"></i></div><div class="num">' + total.toFixed(1) + 'b</div></div>';
+    rows += '<div class="brow real"><div class="name">after correlation (2010 study)</div>' +
+      '<div class="track"><i style="width:' + Math.min(100, correlated / total * 100).toFixed(1) + '%"></i></div>' +
+      '<div class="num">' + correlated + 'b</div></div>';
+    $('bitRows').innerHTML = rows;
+    drawDrift(hash);
+  }
+
+  /* What moved since the last check in this tab — the demo of how tracking survives. */
+  function drawDrift(hash) {
+    var store = 'pp:last';
+    var now = { t: Date.now(), hash: hash, values: {} };
+    signals.forEach(function (s) { now.values[s.key] = s.value; });
+    var prev = null;
+    try { prev = JSON.parse(sessionStorage.getItem(store)); } catch (e) { prev = null; }
+    var el = $('drift');
+    if (prev && prev.values) {
+      var changed = signals.filter(function (s) { return prev.values[s.key] !== s.value; }).map(function (s) { return s.key; });
+      var mins = Math.max(0, Math.round((Date.now() - prev.t) / 60000));
+      el.innerHTML = changed.length
+        ? 'Changed since your last check' + (mins ? ' (' + mins + ' min ago)' : '') + ': <b>' + changed.join(', ') +
+          '</b>. Everything else survived — that is what makes a fingerprint useful to somebody else.'
+        : 'Identical to your last check' + (mins ? ' (' + mins + ' min ago)' : '') +
+          '. Resize the window, install a font or switch networks, then press Recompute.';
+    } else {
+      el.innerHTML = 'Press <b>Recompute</b> after changing something — a window resize, a font, a network — and this line names exactly which signals moved.';
+    }
+    try { sessionStorage.setItem(store, JSON.stringify(now)); } catch (e) { /* private mode */ }
   }
 
   function run() {

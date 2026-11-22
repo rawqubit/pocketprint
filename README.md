@@ -16,7 +16,18 @@ that survives clearing your cookies. This page asks yours out loud.
 ## What it shows
 
 - **22 signals**, each with the actual value your browser handed over and what
-  that value is worth in bits.
+  that value is worth in bits. Values that a browser rounds or estimates say so
+  on hover — device memory is a bucket, and "fonts visible" is what font
+  measurement can infer, not a list of files.
+- **The pixels your GPU drew** and **the waveform your audio stack produced**,
+  rendered under the table: the two probes that make you unique, shown instead of
+  summarised.
+- **Where the bits come from** — the top contributors as bars, next to the honest
+  comparison: the raw sum against the ~18 bits that survive correlation in the
+  2010 study.
+- **The record, verbatim**: the JSON a tracker would keep, on the page, copyable.
+- **A drift check**: press Recompute after resizing the window or installing a
+  font and it names exactly which signals moved and which held.
 - **A fingerprint**: the same kind of hash a tracker would store, built from your
   answers, plus a 4×4 avatar so the thing has a face.
 - **A report you can copy** and a 1200×630 card you can post.
@@ -37,6 +48,10 @@ math precision · storage quota.
 Every one is read from the browser you are already running. There is no server,
 no beacon, no cookie, and no request: the page wraps `fetch` and
 `XMLHttpRequest` on load and the counter in the header stays at **0 bytes**.
+
+The one thing it stores is the previous run's values in `sessionStorage`, so the
+drift check can tell you what changed. That is tab-local, never sent, and gone
+when you close the tab — the source is 40 lines if you want to check.
 
 ## Run it
 
