@@ -1,5 +1,7 @@
 # pocketprint
 
+[![CI](https://github.com/rawqubit/pocketprint/actions/workflows/ci.yml/badge.svg)](https://github.com/rawqubit/pocketprint/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-MIT-56d3a6)](https://github.com/rawqubit/pocketprint/blob/main/LICENSE) [![dependencies](https://img.shields.io/badge/dependencies-none-56d3a6)](https://github.com/rawqubit/pocketprint)
+
 **What every website already knows about you — on one page, in one second.**
 
 Your browser answers about two dozen questions before you click anything: what
