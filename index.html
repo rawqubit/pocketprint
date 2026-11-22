@@ -165,6 +165,13 @@
 (function () {
   'use strict';
 
+  if (!window.PocketPrint) {
+    document.getElementById('hash').textContent = 'src/fp.js did not load';
+    document.getElementById('oneIn').textContent = 'engine missing';
+    document.getElementById('sigNote').textContent = 'the page cannot run without its second script';
+    return;
+  }
+
   /* Count every way out of the page, before anything else runs. */
   var sent = 0;
   var realFetch = window.fetch;
